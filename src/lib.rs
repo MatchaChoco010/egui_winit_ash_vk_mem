@@ -56,7 +56,7 @@ use std::time::Instant;
 
 use ash::{extensions::khr::Swapchain, version::DeviceV1_0, vk, Device};
 use bytemuck::bytes_of;
-use clipboard::{ClipboardContext, ClipboardProvider};
+use copypasta::{ClipboardContext, ClipboardProvider};
 use egui::{
     math::{pos2, vec2},
     paint::ClippedShape,

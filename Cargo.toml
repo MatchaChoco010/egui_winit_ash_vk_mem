@@ -1,6 +1,6 @@
 [package]
 name = "egui_winit_ash_vk_mem"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Orito Itsuki <orito.itsuki@gmail.com>"]
 description = "This is the egui integration crate for winit, ash and vk_mem."
 edition = "2018"
@@ -20,7 +20,7 @@ include = [
 [dependencies]
 ash = "0.31.0"
 bytemuck = "1.5.0"
-clipboard = "0.5.0"
+copypasta = "0.7.1"
 egui = "0.9.0"
 vk-mem = "0.2.2"
 webbrowser = "0.5.5"
