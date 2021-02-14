@@ -100,6 +100,9 @@ pub struct Integration {
     font_image_size: (u64, u64),
     font_image_version: u64,
     font_descriptor_sets: Vec<vk::DescriptorSet>,
+
+    user_texture_layout: vk::DescriptorSetLayout,
+    user_textures: Vec<Option<vk::DescriptorSet>>,
 }
 impl Integration {
     /// Create an instance of the integration.
@@ -153,10 +156,10 @@ impl Integration {
             device.create_descriptor_pool(
                 &vk::DescriptorPoolCreateInfo::builder()
                     .flags(vk::DescriptorPoolCreateFlags::FREE_DESCRIPTOR_SET)
-                    .max_sets(16)
+                    .max_sets(1024)
                     .pool_sizes(&[vk::DescriptorPoolSize::builder()
                         .ty(vk::DescriptorType::COMBINED_IMAGE_SAMPLER)
-                        .descriptor_count(16)
+                        .descriptor_count(1024)
                         .build()]),
                 None,
             )
@@ -500,6 +503,23 @@ impl Integration {
         }
         .expect("Failed to create descriptor sets.");
 
+        // User Textures
+        let user_texture_layout = unsafe {
+            device.create_descriptor_set_layout(
+                &vk::DescriptorSetLayoutCreateInfo::builder().bindings(&[
+                    vk::DescriptorSetLayoutBinding::builder()
+                        .descriptor_type(vk::DescriptorType::COMBINED_IMAGE_SAMPLER)
+                        .descriptor_count(1)
+                        .binding(0)
+                        .stage_flags(vk::ShaderStageFlags::FRAGMENT)
+                        .build(),
+                ]),
+                None,
+            )
+        }
+        .expect("Failed to create descriptor set layout.");
+        let user_textures = vec![];
+
         Self {
             start_time,
 
@@ -535,6 +555,9 @@ impl Integration {
             font_image_size,
             font_image_version,
             font_descriptor_sets,
+
+            user_texture_layout,
+            user_textures,
         }
     }
 
@@ -843,14 +866,6 @@ impl Integration {
                 vk::PipelineBindPoint::GRAPHICS,
                 self.pipeline,
             );
-            self.device.cmd_bind_descriptor_sets(
-                command_buffer,
-                vk::PipelineBindPoint::GRAPHICS,
-                self.pipeline_layout,
-                0,
-                &[self.font_descriptor_sets[index]],
-                &[],
-            );
             self.device.cmd_bind_vertex_buffers(
                 command_buffer,
                 0,
@@ -897,6 +912,37 @@ impl Integration {
         let mut vertex_base = 0;
         let mut index_base = 0;
         for egui::ClippedMesh(rect, mesh) in clipped_meshes {
+            // update texture
+            unsafe {
+                if let egui::TextureId::User(id) = mesh.texture_id {
+                    if let Some(descriptor_set) = self.user_textures[id as usize] {
+                        self.device.cmd_bind_descriptor_sets(
+                            command_buffer,
+                            vk::PipelineBindPoint::GRAPHICS,
+                            self.pipeline_layout,
+                            0,
+                            &[descriptor_set],
+                            &[],
+                        );
+                    } else {
+                        eprintln!(
+                            "This UserTexture has already been unregistered: {:?}",
+                            mesh.texture_id
+                        );
+                        continue;
+                    }
+                } else {
+                    self.device.cmd_bind_descriptor_sets(
+                        command_buffer,
+                        vk::PipelineBindPoint::GRAPHICS,
+                        self.pipeline_layout,
+                        0,
+                        &[self.font_descriptor_sets[index]],
+                        &[],
+                    );
+                }
+            }
+
             if mesh.vertices.is_empty() || mesh.indices.is_empty() {
                 continue;
             }
@@ -1013,7 +1059,18 @@ impl Integration {
             return;
         }
 
+        unsafe {
+            self.device
+                .device_wait_idle()
+                .expect("Failed to wait device idle");
+        }
+
         let dimensions = (texture.width as u64, texture.height as u64);
+        let data = texture
+            .pixels
+            .iter()
+            .flat_map(|&r| vec![r, r, r, r])
+            .collect::<Vec<_>>();
 
         // free prev staging buffer
         self.allocator
@@ -1038,7 +1095,7 @@ impl Integration {
                 &vk::BufferCreateInfo::builder()
                     .usage(vk::BufferUsageFlags::TRANSFER_SRC)
                     .sharing_mode(vk::SharingMode::EXCLUSIVE)
-                    .size(dimensions.0 * dimensions.1),
+                    .size(dimensions.0 * dimensions.1 * 4),
                 &vk_mem::AllocationCreateInfo {
                     usage: vk_mem::MemoryUsage::CpuOnly,
                     required_flags: vk::MemoryPropertyFlags::HOST_VISIBLE
@@ -1053,7 +1110,7 @@ impl Integration {
             .allocator
             .create_image(
                 &vk::ImageCreateInfo::builder()
-                    .format(vk::Format::R8_UNORM)
+                    .format(vk::Format::R8G8B8A8_UNORM)
                     .initial_layout(vk::ImageLayout::UNDEFINED)
                     .samples(vk::SampleCountFlags::TYPE_1)
                     .tiling(vk::ImageTiling::OPTIMAL)
@@ -1079,7 +1136,7 @@ impl Integration {
             self.device.create_image_view(
                 &vk::ImageViewCreateInfo::builder()
                     .image(self.font_image)
-                    .format(vk::Format::R8_UNORM)
+                    .format(vk::Format::R8G8B8A8_UNORM)
                     .view_type(vk::ImageViewType::TYPE_2D)
                     .subresource_range(
                         vk::ImageSubresourceRange::builder()
@@ -1122,7 +1179,7 @@ impl Integration {
             .map_memory(&self.font_image_staging_buffer_allocation)
             .expect("Failed to map memory");
         unsafe {
-            ptr.copy_from_nonoverlapping(texture.pixels.as_ptr(), texture.pixels.len());
+            ptr.copy_from_nonoverlapping(data.as_ptr(), data.len());
         }
         self.allocator
             .unmap_memory(&self.font_image_staging_buffer_allocation)
@@ -1466,11 +1523,97 @@ impl Integration {
             .collect::<Vec<_>>();
     }
 
+    /// Registering user texture.
+    ///
+    /// Pass the Vulkan ImageView and Sampler.
+    /// `image_view`'s image layout must be `SHADER_READ_ONLY_OPTIMAL`.
+    ///
+    /// UserTexture needs to be unregistered when it is no longer needed.
+    ///
+    /// # Example
+    /// ```sh
+    /// cargo run --example user_texture
+    /// ```
+    /// [The example for user texture is in examples directory](https://github.com/MatchaChoco010/egui_winit_ash_vk_mem/tree/main/examples/user_texture)
+    pub fn register_user_texture(
+        &mut self,
+        image_view: vk::ImageView,
+        sampler: vk::Sampler,
+    ) -> egui::TextureId {
+        // get texture id
+        let mut id = None;
+        for (i, user_texture) in self.user_textures.iter().enumerate() {
+            if user_texture.is_none() {
+                id = Some(i as u64);
+                break;
+            }
+        }
+        let id = if let Some(i) = id {
+            i
+        } else {
+            self.user_textures.len() as u64
+        };
+
+        // allocate and update descriptor set
+        let layouts = [self.user_texture_layout];
+        let descriptor_set = unsafe {
+            self.device.allocate_descriptor_sets(
+                &vk::DescriptorSetAllocateInfo::builder()
+                    .descriptor_pool(self.descriptor_pool)
+                    .set_layouts(&layouts),
+            )
+        }
+        .expect("Failed to create descriptor sets.")[0];
+        unsafe {
+            self.device.update_descriptor_sets(
+                &[vk::WriteDescriptorSet::builder()
+                    .descriptor_type(vk::DescriptorType::COMBINED_IMAGE_SAMPLER)
+                    .dst_set(descriptor_set)
+                    .image_info(&[vk::DescriptorImageInfo::builder()
+                        .image_view(image_view)
+                        .image_layout(vk::ImageLayout::SHADER_READ_ONLY_OPTIMAL)
+                        .sampler(sampler)
+                        .build()])
+                    .dst_binding(0)
+                    .build()],
+                &[],
+            );
+        }
+
+        if id == self.user_textures.len() as u64 {
+            self.user_textures.push(Some(descriptor_set));
+        } else {
+            self.user_textures[id as usize] = Some(descriptor_set);
+        }
+
+        egui::TextureId::User(id)
+    }
+
+    /// Unregister user texture.
+    ///
+    /// The internal texture (egui::TextureId::Egui) cannot be unregistered.
+    pub fn unregister_user_texture(&mut self, texture_id: egui::TextureId) {
+        if let egui::TextureId::User(id) = texture_id {
+            if let Some(descriptor_set) = self.user_textures[id as usize] {
+                unsafe {
+                    self.device
+                        .free_descriptor_sets(self.descriptor_pool, &[descriptor_set]);
+                }
+                self.user_textures[id as usize] = None;
+            }
+        } else {
+            eprintln!("The internal texture cannot be unregistered; please pass the texture ID of UserTexture.");
+            return;
+        }
+    }
+
     /// destroy vk objects.
     ///
     /// # Unsafe
     /// This method release vk objects memory that is not managed by Rust.
     pub unsafe fn destroy(&mut self) {
+        self.device
+            .destroy_descriptor_set_layout(self.user_texture_layout, None);
         self.device.destroy_image_view(self.font_image_view, None);
         self.allocator
             .destroy_image(self.font_image, &self.font_image_allocation)

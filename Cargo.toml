@@ -1,6 +1,6 @@
 [package]
 name = "egui_winit_ash_vk_mem"
-version = "0.1.1"
+version = "0.2.0"
 authors = ["Orito Itsuki <orito.itsuki@gmail.com>"]
 description = "This is the egui integration crate for winit, ash and vk_mem."
 edition = "2018"
@@ -30,6 +30,7 @@ winit = "0.24.0"
 anyhow = "1.0.38"
 ash-window = "0.5.0"
 crevice = "0.5.0"
+image = "0.23.13"
 memoffset = "0.6.1"
 mint = "0.5.6"
 tobj = "2.0.3"
