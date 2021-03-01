@@ -580,10 +580,14 @@ impl Integration {
             } => match event {
                 // window size changed
                 WindowEvent::Resized(physical_size) => {
+                    let pixels_per_point = self
+                        .raw_input
+                        .pixels_per_point
+                        .unwrap_or_else(|| self.context.pixels_per_point());
                     self.raw_input.screen_rect = Some(egui::Rect::from_min_size(
                         Default::default(),
                         vec2(physical_size.width as f32, physical_size.height as f32)
-                            / self.scale_factor as f32,
+                            / pixels_per_point,
                     ));
                 }
                 // dpi changed
@@ -593,10 +597,14 @@ impl Integration {
                 } => {
                     self.scale_factor = *scale_factor;
                     self.raw_input.pixels_per_point = Some(*scale_factor as f32);
+                    let pixels_per_point = self
+                        .raw_input
+                        .pixels_per_point
+                        .unwrap_or_else(|| self.context.pixels_per_point());
                     self.raw_input.screen_rect = Some(egui::Rect::from_min_size(
                         Default::default(),
                         vec2(new_inner_size.width as f32, new_inner_size.height as f32)
-                            / self.scale_factor as f32,
+                            / pixels_per_point,
                     ));
                 }
                 // mouse click
@@ -622,9 +630,13 @@ impl Integration {
                 },
                 // mouse move
                 WindowEvent::CursorMoved { position, .. } => {
+                    let pixels_per_point = self
+                        .raw_input
+                        .pixels_per_point
+                        .unwrap_or_else(|| self.context.pixels_per_point());
                     let pos = pos2(
-                        position.x as f32 / self.raw_input.pixels_per_point.unwrap(),
-                        position.y as f32 / self.raw_input.pixels_per_point.unwrap(),
+                        position.x as f32 / pixels_per_point,
+                        position.y as f32 / pixels_per_point,
                     );
                     self.raw_input.events.push(egui::Event::PointerMoved(pos));
                     self.mouse_pos = pos;
