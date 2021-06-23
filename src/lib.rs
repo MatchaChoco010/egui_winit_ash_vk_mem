@@ -773,8 +773,10 @@ impl Integration {
     }
 
     /// Convert from [`egui::CursorIcon`] to [`winit::window::CursorIcon`].
-    pub fn egui_to_winit_cursor_icon(cursor_icon: egui::CursorIcon) -> winit::window::CursorIcon {
-        match cursor_icon {
+    pub fn egui_to_winit_cursor_icon(
+        cursor_icon: egui::CursorIcon,
+    ) -> Option<winit::window::CursorIcon> {
+        Some(match cursor_icon {
             egui::CursorIcon::Default => winit::window::CursorIcon::Default,
             egui::CursorIcon::PointingHand => winit::window::CursorIcon::Hand,
             egui::CursorIcon::ResizeHorizontal => winit::window::CursorIcon::ColResize,
@@ -784,7 +786,23 @@ impl Integration {
             egui::CursorIcon::Text => winit::window::CursorIcon::Text,
             egui::CursorIcon::Grab => winit::window::CursorIcon::Grab,
             egui::CursorIcon::Grabbing => winit::window::CursorIcon::Grabbing,
-        }
+            egui::CursorIcon::None => return None,
+            egui::CursorIcon::ContextMenu => winit::window::CursorIcon::ContextMenu,
+            egui::CursorIcon::Help => winit::window::CursorIcon::Help,
+            egui::CursorIcon::Progress => winit::window::CursorIcon::Progress,
+            egui::CursorIcon::Wait => winit::window::CursorIcon::Wait,
+            egui::CursorIcon::Cell => winit::window::CursorIcon::Cell,
+            egui::CursorIcon::Crosshair => winit::window::CursorIcon::Crosshair,
+            egui::CursorIcon::VerticalText => winit::window::CursorIcon::VerticalText,
+            egui::CursorIcon::Alias => winit::window::CursorIcon::Alias,
+            egui::CursorIcon::Copy => winit::window::CursorIcon::Copy,
+            egui::CursorIcon::Move => winit::window::CursorIcon::Move,
+            egui::CursorIcon::NoDrop => winit::window::CursorIcon::NoDrop,
+            egui::CursorIcon::NotAllowed => winit::window::CursorIcon::NotAllowed,
+            egui::CursorIcon::AllScroll => winit::window::CursorIcon::AllScroll,
+            egui::CursorIcon::ZoomIn => winit::window::CursorIcon::ZoomIn,
+            egui::CursorIcon::ZoomOut => winit::window::CursorIcon::ZoomOut,
+        })
     }
 
     /// begin frame.
@@ -797,7 +815,7 @@ impl Integration {
         let (output, clipped_shapes) = self.context.end_frame();
 
         // handle links
-        if let Some(url) = &output.open_url {
+        if let Some(egui::output::OpenUrl { url, .. }) = &output.open_url {
             if let Err(err) = webbrowser::open(url) {
                 eprintln!("Failed to open url: {}", err);
             }
@@ -991,8 +1009,8 @@ impl Integration {
                     y: min.y * self.scale_factor as f32,
                 };
                 let min = egui::Pos2 {
-                    x: egui::math::clamp(min.x, 0.0..=self.physical_width as f32),
-                    y: egui::math::clamp(min.y, 0.0..=self.physical_height as f32),
+                    x: f32::clamp(min.x, 0.0, self.physical_width as f32),
+                    y: f32::clamp(min.y, 0.0, self.physical_height as f32),
                 };
                 let max = rect.max;
                 let max = egui::Pos2 {
@@ -1000,8 +1018,8 @@ impl Integration {
                     y: max.y * self.scale_factor as f32,
                 };
                 let max = egui::Pos2 {
-                    x: egui::math::clamp(max.x, min.x..=self.physical_width as f32),
-                    y: egui::math::clamp(max.y, min.y..=self.physical_height as f32),
+                    x: f32::clamp(max.x, min.x, self.physical_width as f32),
+                    y: f32::clamp(max.y, min.y, self.physical_height as f32),
                 };
                 self.device.cmd_set_scissor(
                     command_buffer,
