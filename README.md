@@ -16,6 +16,10 @@ and [vk_mem](https://github.com/gwihlidal/vk-mem-rs).
 cargo run --example example
 ```
 
+```sh
+cargo run --example user_texture
+```
+
 # Usage
 
 ```rust
