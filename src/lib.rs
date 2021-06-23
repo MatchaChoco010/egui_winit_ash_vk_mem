@@ -1609,7 +1609,8 @@ impl Integration {
             if let Some(descriptor_set) = self.user_textures[id as usize] {
                 unsafe {
                     self.device
-                        .free_descriptor_sets(self.descriptor_pool, &[descriptor_set]);
+                        .free_descriptor_sets(self.descriptor_pool, &[descriptor_set])
+                        .expect("Failed to free descriptor sets.");
                 }
                 self.user_textures[id as usize] = None;
             }
