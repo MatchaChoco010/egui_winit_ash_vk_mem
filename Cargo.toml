@@ -1,6 +1,6 @@
 [package]
 name = "egui_winit_ash_vk_mem"
-version = "0.3.0"
+version = "0.3.1"
 authors = ["Orito Itsuki <orito.itsuki@gmail.com>"]
 description = "This is the egui integration crate for winit, ash and vk_mem."
 edition = "2018"
