@@ -4,7 +4,7 @@
 [![Documentation](https://docs.rs/egui_winit_ash_vk_mem/badge.svg)](https://docs.rs/egui_winit_ash_vk_mem)
 ![MIT](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Apache](https://img.shields.io/badge/license-Apache-blue.svg)
-[![egui version: 0.10.0](https://img.shields.io/badge/egui%20version-0.10.0-orange)](https://docs.rs/egui/0.10.0/egui/index.html)
+[![egui version: 0.12.0](https://img.shields.io/badge/egui%20version-0.10.0-orange)](https://docs.rs/egui/0.10.0/egui/index.html)
 
 This is the [egui](https://github.com/emilk/egui) integration crate for
 [winit](https://github.com/rust-windowing/winit), [ash](https://github.com/MaikKlein/ash)
