@@ -219,7 +219,7 @@ impl App {
             .build(event_loop)?;
 
         // Create Entry
-        let entry = Entry::new()?;
+        let entry = unsafe { Entry::new()? };
 
         // Create Instance
         let instance = {
