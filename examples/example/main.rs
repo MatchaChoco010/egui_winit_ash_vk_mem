@@ -1351,18 +1351,10 @@ impl App {
                     ui.separator();
                     ui.text_edit_singleline(&mut self.text);
                 });
-            let (output, shapes) = self.egui_integration.end_frame();
+            let (_, shapes) = self.egui_integration.end_frame(&mut self.window);
             let clipped_meshes = self.egui_integration.context().tessellate(shapes);
             self.egui_integration
                 .paint(command_buffer, image_index, clipped_meshes);
-            if let Some(cursor_icon) =
-                egui_winit_ash_vk_mem::Integration::egui_to_winit_cursor_icon(output.cursor_icon)
-            {
-                self.window.set_cursor_visible(true);
-                self.window.set_cursor_icon(cursor_icon);
-            } else {
-                self.window.set_cursor_visible(false);
-            }
             // #### egui ##########################################################################
 
             self.device.end_command_buffer(command_buffer)?;

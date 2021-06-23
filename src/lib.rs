@@ -33,9 +33,8 @@
 //!             }
 //!             Event::MainEventsCleared => app.window.request_redraw(),
 //!             Event::RedrawRequested(_window_id) => {
-//!                 // (4) Call integration.begin_frame(), integration.end_frame(),
-//!                 // integration.context().tessellate(shapes), integration.paint(...) and
-//!                 // window.set_cursor_icon(Integration::egui_to_winit_cursor_icon(cursor_icon))
+//!                 // (4) Call integration.begin_frame(), integration.end_frame(&mut window),
+//!                 // integration.context().tessellate(shapes), integration.paint(...)
 //!                 // in app.draw().
 //!                 app.draw().unwrap();
 //!             }
@@ -63,6 +62,7 @@ use egui::{
     CtxRef, Key,
 };
 use winit::event::{Event, ModifiersState, VirtualKeyCode, WindowEvent};
+use winit::window::Window;
 
 /// egui integration with winit, ash and vk_mem.
 pub struct Integration {
@@ -76,6 +76,7 @@ pub struct Integration {
     mouse_pos: egui::Pos2,
     modifiers_state: ModifiersState,
     clipboard: ClipboardContext,
+    current_cursor_icon: egui::CursorIcon,
 
     device: Device,
     allocator: Arc<vk_mem::Allocator>,
@@ -531,6 +532,7 @@ impl Integration {
             mouse_pos,
             modifiers_state,
             clipboard,
+            current_cursor_icon: egui::CursorIcon::None,
 
             device,
             allocator,
@@ -773,7 +775,7 @@ impl Integration {
     }
 
     /// Convert from [`egui::CursorIcon`] to [`winit::window::CursorIcon`].
-    pub fn egui_to_winit_cursor_icon(
+    fn egui_to_winit_cursor_icon(
         cursor_icon: egui::CursorIcon,
     ) -> Option<winit::window::CursorIcon> {
         Some(match cursor_icon {
@@ -811,7 +813,7 @@ impl Integration {
     }
 
     /// end frame.
-    pub fn end_frame(&mut self) -> (egui::Output, Vec<ClippedShape>) {
+    pub fn end_frame(&mut self, window: &mut Window) -> (egui::Output, Vec<ClippedShape>) {
         let (output, clipped_shapes) = self.context.end_frame();
 
         // handle links
@@ -826,6 +828,17 @@ impl Integration {
             if let Err(err) = self.clipboard.set_contents(output.copied_text.clone()) {
                 eprintln!("Copy/Cut error: {}", err);
             }
+        }
+
+        // handle cursor icon
+        if self.current_cursor_icon != output.cursor_icon {
+            if let Some(cursor_icon) = Integration::egui_to_winit_cursor_icon(output.cursor_icon) {
+                window.set_cursor_visible(true);
+                window.set_cursor_icon(cursor_icon);
+            } else {
+                window.set_cursor_visible(false);
+            }
+            self.current_cursor_icon = output.cursor_icon;
         }
 
         (output, clipped_shapes)

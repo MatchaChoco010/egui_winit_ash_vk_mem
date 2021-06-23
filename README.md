@@ -46,14 +46,8 @@ fn main() -> Result<()> {
             }
             Event::MainEventsCleared => app.window.request_redraw(),
             Event::RedrawRequested(_window_id) => {
-                // (4) Call integration.begin_frame(), integration.end_frame(),
-                // integration.context().tessellate(shapes), integration.paint(...) and
-                // if let Some(cursor_icon) = Integration::egui_to_winit_cursor_icon(cursor_icon) {
-                //     window.set_cursor_visible(true);
-                //     window.set_cursor_icon()
-                // } else {
-                //     window.set_cursor_visible(false);
-                // }
+                // (4) Call integration.begin_frame(), integration.end_frame(&mut window),
+                // integration.context().tessellate(shapes), integration.paint(...)
                 // in app.draw().
                 app.draw().unwrap();
             }
