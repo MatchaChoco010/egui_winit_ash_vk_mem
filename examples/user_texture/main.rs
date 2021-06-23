@@ -962,7 +962,14 @@ impl App {
 
         // vertices
         let vertices = {
-            let model_obj = tobj::load_obj(MODEL_PATH, true)?;
+            let model_obj = tobj::load_obj(
+                MODEL_PATH,
+                &tobj::LoadOptions {
+                    single_index: true,
+                    triangulate: true,
+                    ..Default::default()
+                },
+            )?;
             let mut vertices = vec![];
             let (models, _) = model_obj;
             for m in models.iter() {
@@ -1713,9 +1720,14 @@ impl App {
             let clipped_meshes = self.egui_integration.context().tessellate(shapes);
             self.egui_integration
                 .paint(command_buffer, image_index, clipped_meshes);
-            self.window.set_cursor_icon(
-                egui_winit_ash_vk_mem::Integration::egui_to_winit_cursor_icon(output.cursor_icon),
-            );
+            if let Some(cursor_icon) =
+                egui_winit_ash_vk_mem::Integration::egui_to_winit_cursor_icon(output.cursor_icon)
+            {
+                self.window.set_cursor_visible(true);
+                self.window.set_cursor_icon(cursor_icon);
+            } else {
+                self.window.set_cursor_visible(false);
+            }
             // #### egui ##########################################################################
 
             self.device.end_command_buffer(command_buffer)?;
