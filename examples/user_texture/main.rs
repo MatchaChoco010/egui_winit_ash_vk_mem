@@ -1638,25 +1638,22 @@ impl App {
 
             // #### egui ##########################################################################
             self.egui_integration.begin_frame();
-            egui::SidePanel::left("my_side_panel", 200.0).show(
-                &self.egui_integration.context(),
-                |ui| {
-                    ui.heading("User Texture Example");
-                    ui.separator();
-                    ui.checkbox(&mut self.show_user_texture_window, "User Texture Window");
-                    ui.checkbox(&mut self.show_scene_window, "Scene Window");
-                    ui.horizontal(|ui| {
-                        ui.label("Scene Clear Color");
-                        let mut hsva = egui::color::Hsva::from_rgba_premultiplied(self.clear_color);
-                        egui::color_picker::color_edit_button_hsva(
-                            ui,
-                            &mut hsva,
-                            egui::color_picker::Alpha::OnlyBlend,
-                        );
-                        self.clear_color = hsva.to_rgba_premultiplied();
-                    });
-                },
-            );
+            egui::SidePanel::left("my_side_panel").show(&self.egui_integration.context(), |ui| {
+                ui.heading("User Texture Example");
+                ui.separator();
+                ui.checkbox(&mut self.show_user_texture_window, "User Texture Window");
+                ui.checkbox(&mut self.show_scene_window, "Scene Window");
+                ui.horizontal(|ui| {
+                    ui.label("Scene Clear Color");
+                    let mut hsva = egui::color::Hsva::from_rgba_premultiplied(self.clear_color);
+                    egui::color_picker::color_edit_button_hsva(
+                        ui,
+                        &mut hsva,
+                        egui::color_picker::Alpha::OnlyBlend,
+                    );
+                    self.clear_color = hsva.to_rgba_premultiplied();
+                });
+            });
             {
                 let show_user_texture_window = &mut self.show_user_texture_window;
                 let image_texture_id = self.image_texture_id;
