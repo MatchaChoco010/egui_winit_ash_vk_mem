@@ -1,5 +1,9 @@
 # egui_winit_ash_vk_mem
 
+[_DEPRECATED_]
+This crate has not been maintained.
+Please use [egui-winit-ash-integration](https://github.com/MatchaChoco010/egui-winit-ash-integration).
+
 [![Latest version](https://img.shields.io/crates/v/egui_winit_ash_vk_mem.svg)](https://crates.io/crates/egui_winit_ash_vk_mem)
 [![Documentation](https://docs.rs/egui_winit_ash_vk_mem/badge.svg)](https://docs.rs/egui_winit_ash_vk_mem)
 ![MIT](https://img.shields.io/badge/license-MIT-blue.svg)
